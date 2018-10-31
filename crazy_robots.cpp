@@ -5,7 +5,26 @@
 #include <chrono>
 
 using namespace std;
+string MOVEACTIONS[] = { "a", "d", "w", "s" };
+string SHOOTACTIONS[] = { "f1", "f2", "f3", "f4" };
+struct Plan {
 
+	char default_commands[4] = { 'm', 'm' ,'s', 's' }; // balanced actions
+	char defensive_commands[4] = { 'm', 'm' ,'m', 's' }; //more movement
+	char aggressive_commands[4] = { 's', 's' ,'s', 's' }; //more shooting
+	char* current_commands = default_commands;
+	char getAction() {
+		return (current_commands[rand() % 4]);
+	}
+	void changePlan(string planType) {
+		if (planType == "agressive") {
+			current_commands = aggressive_commands;
+		}
+		if (planType == "defensive") {
+			current_commands = defensive_commands;
+		}
+	}
+};
 struct Robot 
 {
     int hp;
@@ -13,13 +32,14 @@ struct Robot
     int y1;
     int x2;
     int y2;
+	Plan strategy;
 
-    Robot(int hp, int x1, int y1, int x2, int y2) :
-        hp(hp),
-        x1(x1),
-        y1(y1),
-        x2(x2),
-        y2(y2)
+	Robot(int hp, int x1, int y1, int x2, int y2) :
+		hp(hp),
+		x1(x1),
+		y1(y1),
+		x2(x2),
+		y2(y2)
     {
     }
 };
@@ -83,7 +103,6 @@ void printHPArea(Robot &robot, Robot &robot2)
     cout << "HP BOT 1: ";
     printRobotHP(robot);
     cout << "|" << endl;
-
     cout << "HP BOT 2: ";
     printRobotHP(robot2);
     cout << "|" << endl;
@@ -99,10 +118,24 @@ void printscreen(Robot &robot, Robot &robot2)
     printGameField(robot, robot2);
     printHPArea(robot, robot2);
 }
-
+void robot_action(string acts[], Robot& r) {
+	string c = acts[rand() % 4];
+	if (c == "f1") { // esq
+		shoots.push_back(Shoot(r.x1 - 1, r.y1, 0));
+	}
+	else if (c == "f2") { // dir
+		shoots.push_back(Shoot(r.x2 + 1, r.y1, 1));
+	}
+	else if (c == "f3") { // cima
+		shoots.push_back(Shoot(r.x1, r.y1 - 1, 2));
+	}
+	else if (c == "f4") { // baixo
+		shoots.push_back(Shoot(r.x1, r.y2 + 1, 3));
+	}
+}
 void robot_movements(string acts[], Robot& r)
 {
-    string c = acts[rand() % 8];
+    string c = acts[rand() % 4];
     if (c == "a") {
         if (r.x1 > 0) {
             r.x1--;
@@ -127,18 +160,21 @@ void robot_movements(string acts[], Robot& r)
             r.y2++;
         }
     }
-    else if (c == "f1") { // esq
-        shoots.push_back(Shoot(r.x1 - 1, r.y1, 0));
-    }
-    else if (c == "f2") { // dir
-        shoots.push_back(Shoot(r.x2 + 1, r.y1, 1));
-    }
-    else if (c == "f3") { // cima
-        shoots.push_back(Shoot(r.x1, r.y1 - 1, 2));
-    }
-    else if (c == "f4") { // baixo
-        shoots.push_back(Shoot(r.x1, r.y2 + 1, 3));
-    }
+
+
+}
+void RobotActions(Robot& r) {
+	if (r.strategy.getAction() == 'm') {
+		robot_movements(MOVEACTIONS, r);
+
+	}
+	else {
+		robot_action(SHOOTACTIONS, r);
+	}
+	//ChangePlan
+	if (r.hp < 5) {
+		r.strategy.changePlan("aggressive");
+	}
 }
 
 int main()
@@ -147,7 +183,11 @@ int main()
     Robot robot(10, 0, 0, 1, 1);
     Robot robot2(10, 18, 18, 19, 19);
 
-    string acts[] = {"a", "d", "w", "s", "f1", "f2", "f3", "f4"};
+	string plans[] = { "aggressive" , "defensive"};
+	//randomly choose an AI type - can be user set in future.
+	robot.strategy.changePlan(plans[rand() % 2]); 
+	robot2.strategy.changePlan(plans[rand() % 2]);
+
 
     while (true) {
         this_thread::sleep_for(chrono::microseconds(50000));
@@ -179,10 +219,10 @@ int main()
         }
 
         printscreen(robot, robot2);
+		//Robot 1
+	 RobotActions(robot);
+	 RobotActions(robot2);
 
-        robot_movements(acts, robot);
-        robot_movements(acts, robot2);
-        
         for (Shoot &s : shoots) {
             if (s.dir == 0) {
                 if (s.x > 0)
